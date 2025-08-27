@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 
+from datetime import datetime
 import primp
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 from typing import List
+import argparse
+
 
 @dataclass
 class Train:
+    day: str
     time: str
     train_number: str
     train_name: str
@@ -66,6 +70,7 @@ def parse(data):
         
         # Create Train object and add to list
         train = Train(
+            day=datetime.now().strftime("%Y-%m-%d"),
             time=time,
             train_number=train_number,
             train_name=train_name,
@@ -93,7 +98,15 @@ def scrape():
         departures=parse(str(departures_table) if departures_table else ""),
         arrivals=parse(str(arrivals_table) if arrivals_table else ""),
     )
-    
+
+def filter_with_tracks(schedule_board: ScheduleBoard):
+    trains = []
+    for train in zip(schedule_board.departures, schedule_board.arrivals):
+        if train.track:
+            trains.append(train)
+    return trains
+
 
 if __name__ == "__main__":
+    a = argparse.ArgumentParser()
     scrape()
