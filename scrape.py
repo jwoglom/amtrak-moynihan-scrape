@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""
+Amtrak Moynihan Train Hall Scraper
+
+This script scrapes train schedule data from the Moynihan Train Hall website
+and stores it in a SQLite database. All datetime operations use the timezone
+specified by the TZ environment variable (defaults to America/New_York).
+"""
 
 import datetime
 import primp
@@ -8,7 +15,11 @@ from typing import List
 import argparse
 import sqlite3
 import os
+import pytz
 
+# Get timezone from environment variable, default to America/New_York
+TIMEZONE_NAME = os.environ.get('TZ', 'America/New_York')
+TIMEZONE = pytz.timezone(TIMEZONE_NAME)
 
 
 @dataclass
@@ -31,8 +42,11 @@ def adapt_date_iso(val):
     return val.isoformat()
 
 def adapt_datetime_iso(val):
-    """Adapt datetime.datetime to timezone-naive ISO 8601 date."""
-    return val.replace(tzinfo=None).isoformat()
+    """Adapt datetime.datetime to timezone-aware ISO 8601 date."""
+    if val.tzinfo is None:
+        # If naive datetime, assume it's in the configured timezone
+        val = TIMEZONE.localize(val)
+    return val.isoformat()
 
 def adapt_datetime_epoch(val):
     """Adapt datetime.datetime to Unix timestamp."""
@@ -48,11 +62,19 @@ def convert_date(val):
 
 def convert_datetime(val):
     """Convert ISO 8601 datetime to datetime.datetime object."""
-    return datetime.datetime.fromisoformat(val.decode())
+    dt = datetime.datetime.fromisoformat(val.decode())
+    if dt.tzinfo is None:
+        # If naive datetime, assume it's in the configured timezone
+        dt = TIMEZONE.localize(dt)
+    return dt
 
 def convert_timestamp(val):
     """Convert Unix epoch timestamp to datetime.datetime object."""
-    return datetime.datetime.fromtimestamp(int(val))
+    dt = datetime.datetime.fromtimestamp(int(val))
+    if dt.tzinfo is None:
+        # If naive datetime, assume it's in the configured timezone
+        dt = TIMEZONE.localize(dt)
+    return dt
 
 sqlite3.register_converter("date", convert_date)
 sqlite3.register_converter("datetime", convert_datetime)
@@ -89,8 +111,9 @@ def upsert_train_data(trains: List[Train], db_path: str):
         # Assuming day is in YYYY-MM-DD format and time is in HH:MM format
         try:
             day_date = datetime.datetime.strptime(train.day, "%Y-%m-%d").date()
-            # Combine day and time to create a full datetime
-            time_datetime = datetime.datetime.strptime(f"{train.day} {train.time}", "%Y-%m-%d %H:%M %p")
+            # Combine day and time to create a full datetime in the configured timezone
+            naive_datetime = datetime.datetime.strptime(f"{train.day} {train.time}", "%Y-%m-%d %H:%M %p")
+            time_datetime = TIMEZONE.localize(naive_datetime)
         except ValueError as e:
             print(f"Warning: Could not parse date/time for train {train.train_number}: {e}")
             continue
@@ -160,7 +183,7 @@ def parse(data):
         
         # Create Train object and add to list
         train = Train(
-            day=datetime.datetime.now().strftime("%Y-%m-%d"),
+            day=datetime.datetime.now(TIMEZONE).strftime("%Y-%m-%d"),
             time=time,
             train_number=train_number,
             train_name=train_name,
