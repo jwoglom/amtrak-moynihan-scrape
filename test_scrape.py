@@ -149,56 +149,60 @@ class TestScrape(unittest.TestCase):
         mock_response.text = """
         <html>
             <body>
-                <table id="amtrak-departures-target">
-                    <tbody>
-                        <tr class="amtrak-header-row">
-                            <td>6:45 PM</td>
-                            <td colspan="2">
-                                <span class="train-number">241</span>&nbsp;
-                                <span class="train-name">Empire Service</span>
-                            </td>
-                        </tr>
-                        <tr class="amtrak-destination">
-                            <td colspan="2" class="pill-cell">
-                                <span class="pill-destination">Albany-Rensselaer, NY</span>
-                                <span class="pill-status ">Second Boarding</span>
-                            </td>
-                            <td class="track-cell">6</td>
-                        </tr>
-                        <tr class="amtrak-header-row">
-                            <td>7:01 PM</td>
-                            <td colspan="2">
-                                <span class="train-number">57</span>&nbsp;
-                                <span class="train-name">Vermonter</span>
-                            </td>
-                        </tr>
-                        <tr class="amtrak-destination">
-                            <td colspan="2" class="pill-cell">
-                                <span class="pill-destination">Washington, DC</span>
-                                <span class="pill-status ">On Time</span>
-                            </td>
-                            <td class="track-cell"></td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table id="amtrak-arrivals-target">
-                    <tbody>
-                        <tr class="amtrak-header-row">
-                            <td>7:02 PM</td>
-                            <td colspan="2">
-                                <span class="train-number">67</span>&nbsp;
-                                <span class="train-name">Northeast Regional</span>
-                            </td>
-                        </tr>
-                        <tr class="amtrak-destination">
-                            <td colspan="2" class="pill-cell">
-                                <span class="pill-destination">Boston, MA</span>
-                                <span class="pill-status ">On Time</span>
-                            </td>
-                            <td class="track-cell"></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div id="amtrak-departures-target">
+                    <table>
+                        <tbody>
+                            <tr class="amtrak-header-row">
+                                <td>6:45 PM</td>
+                                <td colspan="2">
+                                    <span class="train-number">241</span>&nbsp;
+                                    <span class="train-name">Empire Service</span>
+                                </td>
+                            </tr>
+                            <tr class="amtrak-destination">
+                                <td colspan="2" class="pill-cell">
+                                    <span class="pill-destination">Albany-Rensselaer, NY</span>
+                                    <span class="pill-status ">Second Boarding</span>
+                                </td>
+                                <td class="track-cell">6</td>
+                            </tr>
+                            <tr class="amtrak-header-row">
+                                <td>7:01 PM</td>
+                                <td colspan="2">
+                                    <span class="train-number">57</span>&nbsp;
+                                    <span class="train-name">Vermonter</span>
+                                </td>
+                            </tr>
+                            <tr class="amtrak-destination">
+                                <td colspan="2" class="pill-cell">
+                                    <span class="pill-destination">Washington, DC</span>
+                                    <span class="pill-status ">On Time</span>
+                                </td>
+                                <td class="track-cell"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="amtrak-arrivals-target">
+                    <table>
+                        <tbody>
+                            <tr class="amtrak-header-row">
+                                <td>7:02 PM</td>
+                                <td colspan="2">
+                                    <span class="train-number">67</span>&nbsp;
+                                    <span class="train-name">Northeast Regional</span>
+                                </td>
+                            </tr>
+                            <tr class="amtrak-destination">
+                                <td colspan="2" class="pill-cell">
+                                    <span class="pill-destination">Boston, MA</span>
+                                    <span class="pill-status ">On Time</span>
+                                </td>
+                                <td class="track-cell"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </body>
         </html>
         """

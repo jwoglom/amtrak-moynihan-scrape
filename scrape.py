@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from datetime import datetime
+import datetime
 import primp
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
@@ -8,6 +8,7 @@ from typing import List
 import argparse
 import sqlite3
 import os
+
 
 
 @dataclass
@@ -25,9 +26,41 @@ class ScheduleBoard:
     departures: List[Train]
     arrivals: List[Train]
 
+def adapt_date_iso(val):
+    """Adapt datetime.date to ISO 8601 date."""
+    return val.isoformat()
+
+def adapt_datetime_iso(val):
+    """Adapt datetime.datetime to timezone-naive ISO 8601 date."""
+    return val.replace(tzinfo=None).isoformat()
+
+def adapt_datetime_epoch(val):
+    """Adapt datetime.datetime to Unix timestamp."""
+    return int(val.timestamp())
+
+sqlite3.register_adapter(datetime.date, adapt_date_iso)
+sqlite3.register_adapter(datetime.datetime, adapt_datetime_iso)
+sqlite3.register_adapter(datetime.datetime, adapt_datetime_epoch)
+
+def convert_date(val):
+    """Convert ISO 8601 date to datetime.date object."""
+    return datetime.date.fromisoformat(val.decode())
+
+def convert_datetime(val):
+    """Convert ISO 8601 datetime to datetime.datetime object."""
+    return datetime.datetime.fromisoformat(val.decode())
+
+def convert_timestamp(val):
+    """Convert Unix epoch timestamp to datetime.datetime object."""
+    return datetime.datetime.fromtimestamp(int(val))
+
+sqlite3.register_converter("date", convert_date)
+sqlite3.register_converter("datetime", convert_datetime)
+sqlite3.register_converter("timestamp", convert_timestamp)
+
 def init_database(db_path: str):
     """Initialize the SQLite database with the train_track_locations table."""
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
     cursor = conn.cursor()
     
     cursor.execute('''
@@ -48,16 +81,16 @@ def init_database(db_path: str):
 
 def upsert_train_data(trains: List[Train], db_path: str):
     """Upsert train data into the database."""
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
     cursor = conn.cursor()
     
     for train in trains:
         # Convert day string to DATE and time string to DATETIME
         # Assuming day is in YYYY-MM-DD format and time is in HH:MM format
         try:
-            day_date = datetime.strptime(train.day, "%Y-%m-%d").date()
+            day_date = datetime.datetime.strptime(train.day, "%Y-%m-%d").date()
             # Combine day and time to create a full datetime
-            time_datetime = datetime.strptime(f"{train.day} {train.time}", "%Y-%m-%d %H:%M")
+            time_datetime = datetime.datetime.strptime(f"{train.day} {train.time}", "%Y-%m-%d %H:%M %p")
         except ValueError as e:
             print(f"Warning: Could not parse date/time for train {train.train_number}: {e}")
             continue
@@ -127,7 +160,7 @@ def parse(data):
         
         # Create Train object and add to list
         train = Train(
-            day=datetime.now().strftime("%Y-%m-%d"),
+            day=datetime.datetime.now().strftime("%Y-%m-%d"),
             time=time,
             train_number=train_number,
             train_name=train_name,
@@ -148,8 +181,8 @@ def scrape():
     soup = BeautifulSoup(r.text, 'html.parser')
     
     # Find the tables and convert to string for parsing
-    departures_table = soup.find('table', id='amtrak-departures-target')
-    arrivals_table = soup.find('table', id='amtrak-arrivals-target')
+    departures_table = soup.find(id='amtrak-departures-target')
+    arrivals_table = soup.find(id='amtrak-arrivals-target')
     
     return ScheduleBoard(
         departures=parse(str(departures_table) if departures_table else ""),
@@ -180,6 +213,8 @@ if __name__ == "__main__":
     
     # Find trains with tracks
     trains_with_tracks = find_trains_with_tracks(schedule_board)
+
+    print(f'{trains_with_tracks=}')
     
     # Upsert data into database
     upsert_train_data(trains_with_tracks, args.db)
