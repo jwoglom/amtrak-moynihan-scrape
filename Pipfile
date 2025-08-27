@@ -1,0 +1,15 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "*"
+primp = "*"
+beautifulsoup4 = "*"
+
+[dev-packages]
+
+[scripts]
+"scrape.py" = "python scrape.py"
+test = "python -m unittest discover"
