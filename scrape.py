@@ -6,6 +6,8 @@ from bs4 import BeautifulSoup
 from dataclasses import dataclass
 from typing import List
 import argparse
+import sqlite3
+import os
 
 
 @dataclass
@@ -22,6 +24,61 @@ class Train:
 class ScheduleBoard:
     departures: List[Train]
     arrivals: List[Train]
+
+def init_database(db_path: str):
+    """Initialize the SQLite database with the train_track_locations table."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS train_track_locations (
+            day DATE,
+            time DATETIME,
+            train_number TEXT,
+            train_name TEXT,
+            destination TEXT,
+            status TEXT,
+            track TEXT,
+            PRIMARY KEY (day, time, train_number)
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+def upsert_train_data(trains: List[Train], db_path: str):
+    """Upsert train data into the database."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    for train in trains:
+        # Convert day string to DATE and time string to DATETIME
+        # Assuming day is in YYYY-MM-DD format and time is in HH:MM format
+        try:
+            day_date = datetime.strptime(train.day, "%Y-%m-%d").date()
+            # Combine day and time to create a full datetime
+            time_datetime = datetime.strptime(f"{train.day} {train.time}", "%Y-%m-%d %H:%M")
+        except ValueError as e:
+            print(f"Warning: Could not parse date/time for train {train.train_number}: {e}")
+            continue
+            
+        cursor.execute('''
+            INSERT OR REPLACE INTO train_track_locations 
+            (day, time, train_number, train_name, destination, status, track)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            day_date,
+            time_datetime,
+            train.train_number,
+            train.train_name,
+            train.destination,
+            train.status,
+            train.track
+        ))
+    
+    conn.commit()
+    conn.close()
+
 
 def parse(data):
     soup = BeautifulSoup(data, 'html.parser')
@@ -99,14 +156,32 @@ def scrape():
         arrivals=parse(str(arrivals_table) if arrivals_table else ""),
     )
 
-def filter_with_tracks(schedule_board: ScheduleBoard):
+def find_trains_with_tracks(schedule_board: ScheduleBoard):
+    """Find all trains that have track information."""
     trains = []
-    for train in zip(schedule_board.departures, schedule_board.arrivals):
+    # Combine departures and arrivals, filter for trains with tracks
+    all_trains = schedule_board.departures + schedule_board.arrivals
+    for train in all_trains:
         if train.track:
             trains.append(train)
     return trains
 
 
 if __name__ == "__main__":
-    a = argparse.ArgumentParser()
-    scrape()
+    parser = argparse.ArgumentParser(description='Scrape Amtrak train data from Moynihan Train Hall')
+    parser.add_argument('--db', default='train_data.sqlite3', help='Path to SQLite database file')
+    args = parser.parse_args()
+    
+    # Initialize database
+    init_database(args.db)
+    
+    # Scrape data
+    schedule_board = scrape()
+    
+    # Find trains with tracks
+    trains_with_tracks = find_trains_with_tracks(schedule_board)
+    
+    # Upsert data into database
+    upsert_train_data(trains_with_tracks, args.db)
+    
+    print(f"Successfully stored {len(trains_with_tracks)} trains with track information in database: {args.db}")
