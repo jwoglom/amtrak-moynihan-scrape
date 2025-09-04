@@ -142,6 +142,9 @@ def parse(data):
     
     # Find all train header rows
     header_rows = soup.find_all('tr', class_='amtrak-header-row')
+
+    if not header_rows:
+        print(f"No header rows found: {soup=}")
     
     for header_row in header_rows:
         # Extract time from the first td
@@ -191,6 +194,7 @@ def parse(data):
             status=status,
             track=track
         )
+        print(f"Found train: {train=}")
         trains.append(train)
     
     return trains
