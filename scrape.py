@@ -17,7 +17,6 @@ import sqlite3
 import os
 import pytz
 
-# Get timezone from environment variable, default to America/New_York
 TIMEZONE_NAME = os.environ.get('TZ', 'America/New_York')
 TIMEZONE = pytz.timezone(TIMEZONE_NAME)
 
@@ -42,10 +41,7 @@ def adapt_date_iso(val):
     return val.isoformat()
 
 def adapt_datetime_iso(val):
-    """Adapt datetime.datetime to timezone-aware ISO 8601 date."""
-    if val.tzinfo is None:
-        # If naive datetime, assume it's in the configured timezone
-        val = TIMEZONE.localize(val)
+    """Adapt datetime.datetime to ISO 8601 date."""
     return val.isoformat()
 
 def adapt_datetime_epoch(val):
@@ -63,17 +59,11 @@ def convert_date(val):
 def convert_datetime(val):
     """Convert ISO 8601 datetime to datetime.datetime object."""
     dt = datetime.datetime.fromisoformat(val.decode())
-    if dt.tzinfo is None:
-        # If naive datetime, assume it's in the configured timezone
-        dt = TIMEZONE.localize(dt)
     return dt
 
 def convert_timestamp(val):
     """Convert Unix epoch timestamp to datetime.datetime object."""
     dt = datetime.datetime.fromtimestamp(int(val))
-    if dt.tzinfo is None:
-        # If naive datetime, assume it's in the configured timezone
-        dt = TIMEZONE.localize(dt)
     return dt
 
 sqlite3.register_converter("date", convert_date)
@@ -112,9 +102,8 @@ def upsert_train_data(trains: List[Train], db_path: str):
         # Assuming day is in YYYY-MM-DD format and time is in HH:MM format
         try:
             day_date = datetime.datetime.strptime(train.day, "%Y-%m-%d").date()
-            # Combine day and time to create a full datetime in the configured timezone
-            naive_datetime = datetime.datetime.strptime(f"{train.day} {train.time}", "%Y-%m-%d %H:%M %p")
-            time_datetime = TIMEZONE.localize(naive_datetime)
+            # Combine day and time to create a full datetime
+            time_datetime = datetime.datetime.strptime(f"{train.day} {train.time}", "%Y-%m-%d %H:%M %p")
         except ValueError as e:
             print(f"Warning: Could not parse date/time for train {train.train_number}: {e}")
             continue
