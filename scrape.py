@@ -89,6 +89,7 @@ def init_database(db_path: str):
         CREATE TABLE IF NOT EXISTS train_track_locations (
             day DATE,
             time DATETIME,
+            schedule_time TEXT,
             train_number TEXT,
             train_name TEXT,
             destination TEXT,
@@ -120,11 +121,12 @@ def upsert_train_data(trains: List[Train], db_path: str):
             
         cursor.execute('''
             INSERT OR REPLACE INTO train_track_locations 
-            (day, time, train_number, train_name, destination, status, track)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (day, time, schedule_time, train_number, train_name, destination, status, track)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             day_date,
             time_datetime,
+            train.time,
             train.train_number,
             train.train_name,
             train.destination,
